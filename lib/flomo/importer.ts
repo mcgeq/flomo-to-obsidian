@@ -150,6 +150,11 @@ export class FlomoImporter {
             // 第一层：日期目录 (如 2025-11-03)
             for (const dateItem of dateItems) {
                 if (!dateItem.isDirectory()) continue;
+                
+                // 跳过 . 和 .. 目录
+                if (dateItem.name === '.' || dateItem.name === '..') continue;
+                // 跳过名称以 . 开头的隐藏目录
+                if (dateItem.name.startsWith('.')) continue;
 
                 const dateDirPath = `${sourceDir}/${dateItem.name}`;
                 const targetDateDir = `${targetDir}${dateItem.name}/`;
