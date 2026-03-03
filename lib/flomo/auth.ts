@@ -11,10 +11,10 @@ export class FlomoAuth{
         fs.mkdirpSync(FLOMO_PLAYWRIGHT_CACHE_LOC);
     }
 
-    async auth(uid: string, passwd: string): Promise<[boolean, string]> {
+    async auth(uid: string, passwd: string, headlessMode: boolean = true): Promise<[boolean, string]> {
         try {
             // Setup
-            const browser = await playwright.chromium.launch();
+            const browser = await playwright.chromium.launch({ headless: headlessMode });
             const context = await browser.newContext(playwright.devices['Desktop Chrome']);
             const page = await context.newPage();
             

@@ -16,7 +16,8 @@ interface MyPluginSettings {
 	autoSyncOnStartup: boolean,
 	autoSyncInterval: boolean,
 	lastSyncTime: number,
-	syncedMemoIds: string[]
+	syncedMemoIds: string[],
+	headlessMode: boolean
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
@@ -30,7 +31,8 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 	autoSyncOnStartup: false,
 	autoSyncInterval: false,
 	lastSyncTime: 0,
-	syncedMemoIds: []
+	syncedMemoIds: [],
+	headlessMode: true
 }
 
 export default class FlomoImporterPlugin extends Plugin {

@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as os from 'os';
 import *  as fs from 'fs-extra';
 
-import { AUTH_FILE, DOWNLOAD_FILE } from '../flomo/const'
+import { AUTH_FILE, DOWNLOAD_FILE, FLOMO_PLAYWRIGHT_CACHE_LOC } from '../flomo/const'
 
 export class MainUI extends Modal {
 
@@ -29,7 +29,7 @@ export class MainUI extends Modal {
             if (isAuthFileExist) {
                 btn.setDisabled(true);
                 btn.setButtonText("Exporting from Flomo ...");
-                const exportResult = await (new FlomoExporter().export());
+                const exportResult = await (new FlomoExporter().export(this.plugin.settings.headlessMode));
                 
                 btn.setDisabled(false);
                 if (exportResult[0] == true) {
@@ -94,12 +94,56 @@ export class MainUI extends Modal {
         contentEl.empty();
         contentEl.createEl("h3", { text: "Flomo Importer" });
 
-        const fileLocContol: HTMLInputElement = contentEl.createEl("input", { type: "file", cls: "uploadbox" })
-        fileLocContol.setAttr("accept", ".zip");
-        fileLocContol.onchange = (ev) => {
-            this.rawPath = (ev.currentTarget as HTMLInputElement).files[0]["path"];
-            console.log(this.rawPath)
-        };
+        let fileInput: HTMLInputElement | null = null;
+        let selectedFileEl: HTMLElement | null = null;
+
+        const fileInfoContainer = contentEl.createDiv();
+        fileInfoContainer.style.marginBottom = "10px";
+
+        new Setting(contentEl)
+            .setName('Flomo Backup File')
+            .setDesc('Select your flomo export zip file')
+            .addButton((btn) => {
+                btn.setButtonText("Choose File")
+                    .onClick(() => {
+                        if (!fileInput) {
+                            fileInput = contentEl.createEl("input", { type: "file", attr: { accept: ".zip" } });
+                            fileInput.style.display = "none";
+                            fileInput.onchange = async (ev) => {
+                                const files = (ev.target as HTMLInputElement).files;
+                                if (files && files.length > 0) {
+                                    const file = files[0];
+                                    try {
+                                        const cacheDir = FLOMO_PLAYWRIGHT_CACHE_LOC;
+                                        await fs.ensureDir(cacheDir);
+                                        const targetPath = path.join(cacheDir, 'manual_import.zip');
+                                        
+                                        const arrayBuffer = await file.arrayBuffer();
+                                        const buffer = Buffer.from(arrayBuffer);
+                                        await fs.writeFile(targetPath, buffer);
+                                        
+                                        this.rawPath = targetPath;
+                                        
+                                        if (!selectedFileEl) {
+                                            selectedFileEl = fileInfoContainer.createEl("div", { 
+                                                cls: "selected-file",
+                                                text: file.name
+                                            });
+                                            selectedFileEl.style.fontSize = "12px";
+                                            selectedFileEl.style.color = "#888";
+                                            selectedFileEl.style.marginTop = "4px";
+                                        } else {
+                                            selectedFileEl.setText(file.name);
+                                        }
+                                    } catch (err) {
+                                        new Notice(`Error reading file: ${err}`);
+                                    }
+                                }
+                            };
+                        }
+                        fileInput.click();
+                    });
+            });
 
         contentEl.createEl("br");
 
@@ -229,6 +273,13 @@ export class MainUI extends Modal {
             }
         };
 
+        const headlessMode = createExpOpt(contentEl, "Run browser in headless mode (recommended)")
+
+        headlessMode.checked = this.plugin.settings.headlessMode;
+        headlessMode.onchange = (ev) => {
+            this.plugin.settings.headlessMode = (ev.currentTarget as HTMLInputElement).checked;
+        };
+
         // 显示上次同步时间和同步记录数
         if (this.plugin.settings.lastSyncTime) {
             const lastSyncDate = new Date(this.plugin.settings.lastSyncTime);
@@ -279,7 +330,19 @@ export class MainUI extends Modal {
                     })
             });
 
-        new Setting(contentEl)
+        const divider = contentEl.createEl("hr");
+        divider.style.marginTop = "15px";
+        divider.style.marginBottom = "15px";
+        divider.style.border = "none";
+        divider.style.borderTop = "1px solid var(--divider-color)";
+
+        const buttonContainer = contentEl.createDiv();
+        buttonContainer.style.display = "flex";
+        buttonContainer.style.justifyContent = "center";
+        buttonContainer.style.gap = "10px";
+        buttonContainer.style.marginTop = "15px";
+
+        new Setting(buttonContainer)
             .addButton((btn) => {
                 btn.setButtonText("Cancel")
                     .setCta()
@@ -295,9 +358,6 @@ export class MainUI extends Modal {
                         if (this.rawPath != "") {
                             await this.plugin.saveSettings();
                             await this.onSubmit();
-                            //const manualSyncUI: Modal = new ManualSyncUI(this.app, this.plugin);
-                            //manualSyncUI.open();
-                            this.close();
                         }
                         else {
                             new Notice("No File Selected.")
@@ -312,7 +372,7 @@ export class MainUI extends Modal {
                         await this.onSync(btn);
                         //this.close();
                     })
-            });   
+            });
 
     }
 

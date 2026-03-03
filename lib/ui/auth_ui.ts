@@ -63,7 +63,7 @@ export class AuthUI extends Modal {
                             //console.log(`${this.uid} + ${this.passwd}`);
                             btn.setButtonText("Authenticating...");
                             btn.setDisabled(true);
-                            const authResult = await (new FlomoAuth().auth(this.uid, this.passwd))
+                            const authResult = await (new FlomoAuth().auth(this.uid, this.passwd, this.plugin.settings.headlessMode))
                             btn.setDisabled(false);
                             btn.setButtonText("Authenticate");
                             if (authResult[0] == true) {
